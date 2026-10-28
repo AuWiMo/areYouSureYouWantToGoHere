@@ -1,7 +1,9 @@
 package dev.areyousureyou.wanttogohere.enforcement;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -29,5 +31,12 @@ public class TargetMatcherTest {
     @Test public void appTargetRequiresExactPackageName() {
         assertEquals(app, TargetMatcher.findAppTarget(targets, "com.example.mail"));
         assertNull(TargetMatcher.findAppTarget(targets, "com.example.mail.fake"));
+    }
+
+    @Test public void chromeAddressMustContainARecognizableHostBeforeItCanRearmMatching() {
+        assertTrue(TargetMatcher.hasRecognizableWebsiteHost("chrome://newtab/"));
+        assertTrue(TargetMatcher.hasRecognizableWebsiteHost("example.org/path"));
+        assertFalse(TargetMatcher.hasRecognizableWebsiteHost(null));
+        assertFalse(TargetMatcher.hasRecognizableWebsiteHost("Search or type URL"));
     }
 }

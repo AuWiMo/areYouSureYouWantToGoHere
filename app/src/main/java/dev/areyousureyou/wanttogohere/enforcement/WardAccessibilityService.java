@@ -2,6 +2,8 @@ package dev.areyousureyou.wanttogohere.enforcement;
 
 import android.accessibilityservice.AccessibilityService;
 import android.content.Intent;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
 
@@ -17,17 +19,26 @@ import java.util.List;
 /** Event-driven observer for configured app targets and Chrome website targets. */
 public final class WardAccessibilityService extends AccessibilityService {
     private static final String CHROME = "com.android.chrome";
-    private String suppressedTargetId;
+    private static WardAccessibilityService activeInstance;
+    private final TargetVisitGate visitGate = new TargetVisitGate();
     private ProfileRepository profiles;
 
     @Override
     protected void onServiceConnected() {
         super.onServiceConnected();
+        activeInstance = this;
         try {
             profiles = new JsonProfileRepository(this);
         } catch (IOException exception) {
             profiles = null;
         }
+    }
+
+    public static void returnToPreviousPage() {
+        WardAccessibilityService service = activeInstance;
+        if (service == null) return;
+        new Handler(Looper.getMainLooper()).postDelayed(
+                () -> service.performGlobalAction(GLOBAL_ACTION_BACK), 350);
     }
 
     @Override
@@ -53,21 +64,24 @@ public final class WardAccessibilityService extends AccessibilityService {
             TargetProfile website = TargetMatcher.findWebsiteTarget(targets, address);
             if (website != null) target = website;
             else if (target == null) {
-                suppressedTargetId = null;
+                if (TargetMatcher.hasRecognizableWebsiteHost(address)) {
+                    visitGate.leaveTarget();
+                }
                 return;
             }
         }
         if (target == null) {
-            suppressedTargetId = null;
+            visitGate.leaveTarget();
             return;
         }
-        if (target.id.equals(suppressedTargetId)) return;
-
         WardProfile ward = findWard(profiles.getWards(), target.wardId);
         if (ward == null) return;
-        suppressedTargetId = target.id;
+        if (!visitGate.shouldShow(target.id)) return;
         Intent intent = new Intent(this, WardActivity.class)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
+                        | Intent.FLAG_ACTIVITY_MULTIPLE_TASK
+                        | Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS
+                        | Intent.FLAG_ACTIVITY_SINGLE_TOP)
                 .putExtra(WardActivity.EXTRA_TARGET_ID, target.id)
                 .putExtra(WardActivity.EXTRA_TARGET_NAME, target.name)
                 .putExtra(WardActivity.EXTRA_WARD_NAME, ward.name)
@@ -115,4 +129,9 @@ public final class WardAccessibilityService extends AccessibilityService {
     }
 
     @Override public void onInterrupt() { }
+
+    @Override public void onDestroy() {
+        if (activeInstance == this) activeInstance = null;
+        super.onDestroy();
+    }
 }

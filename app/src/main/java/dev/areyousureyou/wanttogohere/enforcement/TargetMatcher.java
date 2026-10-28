@@ -32,6 +32,10 @@ public final class TargetMatcher {
         return null;
     }
 
+    public static boolean hasRecognizableWebsiteHost(String address) {
+        return hostFromAddress(address) != null;
+    }
+
     static String hostFromAddress(String value) {
         if (value == null || value.trim().isEmpty()) return null;
         String address = value.trim();

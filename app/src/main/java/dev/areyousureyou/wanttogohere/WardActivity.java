@@ -16,6 +16,7 @@ import android.widget.Toast;
 
 import dev.areyousureyou.wanttogohere.data.WardProfile;
 import dev.areyousureyou.wanttogohere.enforcement.PassphraseMatcher;
+import dev.areyousureyou.wanttogohere.enforcement.WardAccessibilityService;
 
 import java.util.Locale;
 
@@ -33,6 +34,7 @@ public final class WardActivity extends Activity {
     private CountDownTimer timer;
     private TextView status;
     private EditText answer;
+    private Button waitAction;
     private String passphrase;
     private boolean caseSensitive;
 
@@ -65,6 +67,9 @@ public final class WardActivity extends Activity {
         layout.addView(status);
 
         if (WardProfile.Mode.WAIT.name().equals(mode)) {
+            waitAction = button("CLOSE");
+            waitAction.setOnClickListener(view -> cancelTarget());
+            layout.addView(waitAction, buttonParams());
             startWait(layout, getIntent().getIntExtra(EXTRA_WAIT_SECONDS, 1));
         } else {
             if (showPassphrase && passphrase != null) {
@@ -83,10 +88,10 @@ public final class WardActivity extends Activity {
             Button submit = button("CONTINUE");
             submit.setOnClickListener(view -> checkAnswer());
             layout.addView(submit, buttonParams());
+            Button close = button("CLOSE");
+            close.setOnClickListener(view -> cancelTarget());
+            layout.addView(close, buttonParams());
         }
-        Button close = button("CLOSE");
-        close.setOnClickListener(view -> finish());
-        layout.addView(close, buttonParams());
         setContentView(layout);
     }
 
@@ -99,9 +104,8 @@ public final class WardActivity extends Activity {
             }
             @Override public void onFinish() {
                 status.setText("You can continue now.");
-                Button done = button("CONTINUE");
-                done.setOnClickListener(view -> finish());
-                layout.addView(done, layout.indexOfChild(status) + 1, buttonParams());
+                waitAction.setText("CONTINUE");
+                waitAction.setOnClickListener(view -> finish());
             }
         }.start();
     }
@@ -115,6 +119,15 @@ public final class WardActivity extends Activity {
             answer.setError("That passphrase does not match");
             Toast.makeText(this, "Try again", Toast.LENGTH_SHORT).show();
         }
+    }
+
+    private void cancelTarget() {
+        finish();
+        WardAccessibilityService.returnToPreviousPage();
+    }
+
+    @Override public void onBackPressed() {
+        cancelTarget();
     }
 
     private TextView label(String value, int size, int color) {
