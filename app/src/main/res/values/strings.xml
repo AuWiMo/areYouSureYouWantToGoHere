@@ -1,0 +1,3 @@
+<resources>
+    <string name="accessibility_service_description">Detect configured apps and Chrome websites to show their assigned ward.</string>
+</resources>

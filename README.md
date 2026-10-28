@@ -2,7 +2,7 @@
 
 Wards is a personal Android app project for adding a deliberate pause before opening selected websites or apps. Its first focus is site-specific wards for Google Chrome on a Samsung Galaxy S21+.
 
-The app now has a basic dark interface for creating, editing, and deleting ward and target profiles. It does not yet enforce wards or monitor Chrome.
+The app has a basic dark interface for creating, editing, and deleting ward and target profiles. When its accessibility service is enabled, it can show the assigned ward when a selected app opens or when a selected website appears in Chrome.
 
 ## Planned behavior
 
@@ -12,7 +12,11 @@ The app now has a basic dark interface for creating, editing, and deleting ward 
 - For a blocked website, return to the previous page after closing or completing the ward, rather than repeatedly reopening Chrome.
 - Keep background work and battery use as low as Android allows.
 
-The first behavior prototype will focus on recognizing and handling a selected website in Chrome. The exact Android mechanism and its reliability need to be confirmed on the phone before enforcement is added.
+Website detection reads Chrome's visible address bar through Android accessibility events. App targets use their Android package names. Matching a website target includes its subdomains. Android does not expose every browser's current page through a stable public API, so site detection currently supports Chrome only and must be checked on the target phone.
+
+To enable monitoring, install and open Wards, then open Android Settings → Accessibility → Installed apps (the exact labels vary by device) → Wards target monitoring, and turn it on. Android requires the owner to enable accessibility services manually. The service observes foreground window changes and Chrome's visible address bar; it does not poll in the background. Disable the service in the same settings screen to stop monitoring.
+
+When a match is found, Wards opens a full-screen ward screen. Wait wards show a countdown and allow continuing when it ends. Passphrase wards check the configured phrase using the selected case-sensitivity rule, and can display the phrase if that option is enabled. Closing or completing the screen returns to the prior app or page. A ward is shown once per target visit, so closing it does not immediately reopen it while that same app or website remains active.
 
 ## Profiles and storage
 
@@ -20,7 +24,7 @@ Ward and target profiles are saved in a JSON file inside the app's private stora
 
 Passphrases are stored in the same private app storage and are not separately encrypted. Android isolates this storage from other apps. Removing the app removes its saved profiles.
 
-The profile editor accepts a website or domain for a website target, and a package name for an app target. These are saved profiles only: the app does not yet look up installed apps, detect active sites, or apply a ward.
+The profile editor accepts a website or domain for a website target, and a package name for an app target. App targets can be entered directly; the app does not look up installed apps.
 
 ## Open the project
 
