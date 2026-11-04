@@ -83,7 +83,8 @@ public final class WardAccessibilityService extends AccessibilityService {
                         | Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS
                         | Intent.FLAG_ACTIVITY_SINGLE_TOP)
                 .putExtra(WardActivity.EXTRA_TARGET_ID, target.id)
-                .putExtra(WardActivity.EXTRA_TARGET_NAME, target.name)
+                .putExtra(WardActivity.EXTRA_TARGET_NAME, target.sourceType == TargetProfile.SourceType.APP
+                        ? appLabel(target.sourceValue, target.name) : target.name)
                 .putExtra(WardActivity.EXTRA_WARD_NAME, ward.name)
                 .putExtra(WardActivity.EXTRA_MODE, ward.mode.name())
                 .putExtra(WardActivity.EXTRA_WAIT_SECONDS, ward.waitSeconds)
@@ -91,6 +92,15 @@ public final class WardAccessibilityService extends AccessibilityService {
                 .putExtra(WardActivity.EXTRA_SHOW_PASSPHRASE, ward.showPassphrase)
                 .putExtra(WardActivity.EXTRA_CASE_SENSITIVE, ward.caseSensitive);
         startActivity(intent);
+    }
+
+    private String appLabel(String packageName, String fallback) {
+        try {
+            return getPackageManager().getApplicationLabel(
+                    getPackageManager().getApplicationInfo(packageName, 0)).toString();
+        } catch (android.content.pm.PackageManager.NameNotFoundException exception) {
+            return fallback;
+        }
     }
 
     private WardProfile findWard(List<WardProfile> wards, String wardId) {

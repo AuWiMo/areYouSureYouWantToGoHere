@@ -215,8 +215,11 @@ public final class MainActivity extends Activity {
             String kind = target.sourceType == TargetProfile.SourceType.WEBSITE
                     ? "Website" : "App";
             String wardName = findWardName(target.wardId);
-            String description = kind + " · " + target.sourceValue + "\nWard · " + wardName;
-            addProfileCard(list, target.name, description,
+            boolean appTarget = target.sourceType == TargetProfile.SourceType.APP;
+            String title = appTarget ? appLabel(target.sourceValue, target.name) : target.name;
+            String sourceValue = target.sourceValue;
+            String description = kind + " · " + sourceValue + "\nWard · " + wardName;
+            addProfileCard(list, title, description,
                     () -> editTarget(target),
                     () -> confirmDeleteTarget(target));
         }
@@ -566,6 +569,15 @@ public final class MainActivity extends Activity {
             }
         }
         return "Missing ward";
+    }
+
+    private String appLabel(String packageName, String fallback) {
+        try {
+            return getPackageManager().getApplicationLabel(
+                    getPackageManager().getApplicationInfo(packageName, 0)).toString();
+        } catch (android.content.pm.PackageManager.NameNotFoundException exception) {
+            return fallback;
+        }
     }
 
     private String passphraseDescription(WardProfile ward) {
