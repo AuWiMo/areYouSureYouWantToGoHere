@@ -8,6 +8,7 @@ import android.content.Intent;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.text.InputType;
 import android.view.Gravity;
 import android.view.View;
@@ -50,6 +51,7 @@ public final class MainActivity extends Activity {
     private Button targetsTab;
     private EditText appPackageInput;
     private EditText appTargetNameInput;
+    private AlertDialog accessibilityPrompt;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -67,6 +69,42 @@ public final class MainActivity extends Activity {
 
         buildLayout();
         render();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (!isWardMonitoringEnabled() && accessibilityPrompt == null) {
+            accessibilityPrompt = new AlertDialog.Builder(this)
+                    .setTitle("Enable target monitoring")
+                    .setMessage("Wards target monitoring must be enabled under Settings → Accessibility → Installed apps for app and website targets to work.")
+                    .setNegativeButton("Later", (dialog, which) -> accessibilityPrompt = null)
+                    .setPositiveButton("Open settings", (dialog, which) -> {
+                        accessibilityPrompt = null;
+                        try {
+                            startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS));
+                        } catch (ActivityNotFoundException exception) {
+                            Toast.makeText(this, "Accessibility settings are unavailable on this device.", Toast.LENGTH_LONG).show();
+                        }
+                    })
+                    .setOnCancelListener(dialog -> accessibilityPrompt = null)
+                    .create();
+            accessibilityPrompt.setOnDismissListener(dialog -> accessibilityPrompt = null);
+            showDialog(accessibilityPrompt);
+        }
+    }
+
+    private boolean isWardMonitoringEnabled() {
+        String enabledServices = Settings.Secure.getString(
+                getContentResolver(), Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES);
+        if (enabledServices == null) return false;
+        String expected = new ComponentName(this,
+                dev.areyousureyou.wanttogohere.enforcement.WardAccessibilityService.class)
+                .flattenToString();
+        for (String service : enabledServices.split(":")) {
+            if (expected.equalsIgnoreCase(service)) return true;
+        }
+        return false;
     }
 
     private void buildLayout() {
