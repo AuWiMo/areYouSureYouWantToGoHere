@@ -2,6 +2,7 @@ package dev.areyousureyou.wanttogohere.enforcement;
 
 import android.accessibilityservice.AccessibilityService;
 import android.content.Intent;
+import android.provider.Settings;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.accessibility.AccessibilityEvent;
@@ -19,8 +20,12 @@ import java.util.List;
 /** Event-driven observer for configured app targets and Chrome website targets. */
 public final class WardAccessibilityService extends AccessibilityService {
     private static final String CHROME = "com.android.chrome";
+    private static final long APP_EXIT_CONFIRMATION_MS = 800;
     private static WardAccessibilityService activeInstance;
+    private final Handler eventHandler = new Handler(Looper.getMainLooper());
     private final TargetVisitGate visitGate = new TargetVisitGate();
+    private String activeAppTargetPackage;
+    private Runnable pendingAppExit;
     private ProfileRepository profiles;
 
     @Override
@@ -65,18 +70,29 @@ public final class WardAccessibilityService extends AccessibilityService {
             if (website != null) target = website;
             else if (target == null) {
                 if (TargetMatcher.hasRecognizableWebsiteHost(address)) {
-                    visitGate.leaveTarget();
+                    if (activeAppTargetPackage != null) scheduleAppExitConfirmation();
+                    else visitGate.leaveTarget();
                 }
                 return;
             }
         }
         if (target == null) {
-            visitGate.leaveTarget();
+            // Content changes and transient system windows do not necessarily mean
+            // the user left the warded app. Reset only after a real app switch.
+            if (activeAppTargetPackage != null
+                    && event.getEventType() == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED
+                    && !activeAppTargetPackage.equals(packageName)
+                    && !isTransientWindowPackage(packageName)) {
+                scheduleAppExitConfirmation();
+            }
             return;
         }
+        cancelPendingAppExit();
         WardProfile ward = findWard(profiles.getWards(), target.wardId);
         if (ward == null) return;
         if (!visitGate.shouldShow(target.id)) return;
+        activeAppTargetPackage = target.sourceType == TargetProfile.SourceType.APP
+                ? target.sourceValue : null;
         Intent intent = new Intent(this, WardActivity.class)
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
                         | Intent.FLAG_ACTIVITY_MULTIPLE_TASK
@@ -101,6 +117,33 @@ public final class WardAccessibilityService extends AccessibilityService {
         } catch (android.content.pm.PackageManager.NameNotFoundException exception) {
             return fallback;
         }
+    }
+
+    private boolean isTransientWindowPackage(String packageName) {
+        if ("com.android.systemui".equals(packageName)) return true;
+        String defaultInputMethod = Settings.Secure.getString(
+                getContentResolver(), Settings.Secure.DEFAULT_INPUT_METHOD);
+        if (defaultInputMethod == null) return false;
+        int separator = defaultInputMethod.indexOf('/');
+        String inputMethodPackage = separator < 0
+                ? defaultInputMethod : defaultInputMethod.substring(0, separator);
+        return packageName.equals(inputMethodPackage);
+    }
+
+    private void scheduleAppExitConfirmation() {
+        cancelPendingAppExit();
+        pendingAppExit = () -> {
+            visitGate.leaveTarget();
+            activeAppTargetPackage = null;
+            pendingAppExit = null;
+        };
+        eventHandler.postDelayed(pendingAppExit, APP_EXIT_CONFIRMATION_MS);
+    }
+
+    private void cancelPendingAppExit() {
+        if (pendingAppExit == null) return;
+        eventHandler.removeCallbacks(pendingAppExit);
+        pendingAppExit = null;
     }
 
     private WardProfile findWard(List<WardProfile> wards, String wardId) {
@@ -141,6 +184,7 @@ public final class WardAccessibilityService extends AccessibilityService {
     @Override public void onInterrupt() { }
 
     @Override public void onDestroy() {
+        cancelPendingAppExit();
         if (activeInstance == this) activeInstance = null;
         super.onDestroy();
     }
