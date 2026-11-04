@@ -6,6 +6,7 @@ import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.text.InputType;
 import android.view.Gravity;
+import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.Button;
@@ -34,7 +35,7 @@ public final class WardActivity extends Activity {
     private CountDownTimer timer;
     private TextView status;
     private EditText answer;
-    private Button waitAction;
+    private Button waitContinue;
     private String passphrase;
     private boolean caseSensitive;
 
@@ -67,9 +68,13 @@ public final class WardActivity extends Activity {
         layout.addView(status);
 
         if (WardProfile.Mode.WAIT.name().equals(mode)) {
-            waitAction = button("CLOSE");
-            waitAction.setOnClickListener(view -> cancelTarget());
-            layout.addView(waitAction, buttonParams());
+            Button close = button("CLOSE");
+            close.setOnClickListener(view -> cancelTarget());
+            layout.addView(close, buttonParams());
+            waitContinue = button("CONTINUE");
+            waitContinue.setVisibility(View.GONE);
+            waitContinue.setOnClickListener(view -> finish());
+            layout.addView(waitContinue, buttonParams());
             startWait(layout, getIntent().getIntExtra(EXTRA_WAIT_SECONDS, 1));
         } else {
             if (showPassphrase && passphrase != null) {
@@ -104,8 +109,7 @@ public final class WardActivity extends Activity {
             }
             @Override public void onFinish() {
                 status.setText("You can continue now.");
-                waitAction.setText("CONTINUE");
-                waitAction.setOnClickListener(view -> finish());
+                waitContinue.setVisibility(View.VISIBLE);
             }
         }.start();
     }
