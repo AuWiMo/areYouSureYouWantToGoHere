@@ -2,6 +2,9 @@ package dev.areyousureyou.wanttogohere;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.ActivityNotFoundException;
+import android.content.ComponentName;
+import android.content.Intent;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
@@ -45,6 +48,8 @@ public final class MainActivity extends Activity {
     private Button addButton;
     private Button wardsTab;
     private Button targetsTab;
+    private EditText appPackageInput;
+    private EditText appTargetNameInput;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -346,6 +351,19 @@ public final class MainActivity extends Activity {
                         ? "Website or domain" : "App package name",
                 InputType.TYPE_CLASS_TEXT,
                 existing == null ? "" : existing.sourceValue);
+        appPackageInput = sourceValueInput;
+        appTargetNameInput = nameInput;
+        LinearLayout appPickerRow = new LinearLayout(this);
+        appPickerRow.setOrientation(LinearLayout.HORIZONTAL);
+        Button browseAppsButton = button("Browse apps", false);
+        LinearLayout.LayoutParams browseParams = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(44));
+        browseParams.bottomMargin = dp(8);
+        appPickerRow.addView(browseAppsButton, browseParams);
+        form.addView(appPickerRow);
+        appPickerRow.setVisibility(startingType == TargetProfile.SourceType.APP
+                ? View.VISIBLE : View.GONE);
+        browseAppsButton.setOnClickListener(view -> openAppPicker());
         String[] selectedWardId = {existing == null ? wards.get(0).id : existing.wardId};
         Button wardPicker = button("", false);
         wardPicker.setGravity(Gravity.START | Gravity.CENTER_VERTICAL);
@@ -357,6 +375,7 @@ public final class MainActivity extends Activity {
         sourceGroup.setOnCheckedChangeListener((group, checkedId) -> {
             boolean website = websiteOption.isChecked();
             sourceValueInput.setHint(website ? "Website or domain" : "App package name");
+            appPickerRow.setVisibility(website ? View.GONE : View.VISIBLE);
             sourceValueInput.setInputType(website
                     ? InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI
                     : InputType.TYPE_CLASS_TEXT);
@@ -399,6 +418,40 @@ public final class MainActivity extends Activity {
                     }
                 }));
         showDialog(dialog);
+    }
+
+    private void openAppPicker() {
+        Intent launchableApps = new Intent(Intent.ACTION_MAIN);
+        launchableApps.addCategory(Intent.CATEGORY_LAUNCHER);
+        Intent picker = new Intent(Intent.ACTION_PICK_ACTIVITY);
+        picker.putExtra(Intent.EXTRA_INTENT, launchableApps);
+        try {
+            startActivityForResult(picker, 1);
+        } catch (ActivityNotFoundException exception) {
+            showMessage("App picker unavailable", "This device does not provide the Android app picker.");
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode != 1 || resultCode != RESULT_OK || data == null
+                || data.getComponent() == null || appPackageInput == null) {
+            return;
+        }
+
+        ComponentName selectedApp = data.getComponent();
+        String packageName = selectedApp.getPackageName();
+        appPackageInput.setText(packageName);
+        if (appTargetNameInput != null && valueOf(appTargetNameInput).trim().isEmpty()) {
+            try {
+                CharSequence label = getPackageManager().getApplicationLabel(
+                        getPackageManager().getApplicationInfo(packageName, 0));
+                appTargetNameInput.setText(label);
+            } catch (android.content.pm.PackageManager.NameNotFoundException ignored) {
+                appTargetNameInput.setText(packageName);
+            }
+        }
     }
 
     private void chooseWard(List<WardProfile> wards, String[] selectedId, Button button) {
