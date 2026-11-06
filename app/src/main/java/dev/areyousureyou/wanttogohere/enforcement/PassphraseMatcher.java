@@ -1,4 +1,4 @@
-package dev.areyousureyou.wanttogohere.enforcement;
+package com.auwimo.areyousure.enforcement;
 
 public final class PassphraseMatcher {
     private PassphraseMatcher() { }

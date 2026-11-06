@@ -1,4 +1,4 @@
-package dev.areyousureyou.wanttogohere.enforcement;
+package com.auwimo.areyousure.enforcement;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;

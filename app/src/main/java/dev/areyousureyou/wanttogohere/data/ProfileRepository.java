@@ -1,4 +1,4 @@
-package dev.areyousureyou.wanttogohere.data;
+package com.auwimo.areyousure.data;
 
 import java.io.IOException;
 import java.util.List;

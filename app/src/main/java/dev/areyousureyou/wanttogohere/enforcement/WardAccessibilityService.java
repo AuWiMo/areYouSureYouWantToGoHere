@@ -1,4 +1,4 @@
-package dev.areyousureyou.wanttogohere.enforcement;
+package com.auwimo.areyousure.enforcement;
 
 import android.accessibilityservice.AccessibilityService;
 import android.content.Intent;
@@ -8,11 +8,11 @@ import android.os.Looper;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
 
-import dev.areyousureyou.wanttogohere.WardActivity;
-import dev.areyousureyou.wanttogohere.data.JsonProfileRepository;
-import dev.areyousureyou.wanttogohere.data.ProfileRepository;
-import dev.areyousureyou.wanttogohere.data.TargetProfile;
-import dev.areyousureyou.wanttogohere.data.WardProfile;
+import com.auwimo.areyousure.WardActivity;
+import com.auwimo.areyousure.data.JsonProfileRepository;
+import com.auwimo.areyousure.data.ProfileRepository;
+import com.auwimo.areyousure.data.TargetProfile;
+import com.auwimo.areyousure.data.WardProfile;
 
 import java.io.IOException;
 import java.util.List;
@@ -21,11 +21,14 @@ import java.util.List;
 public final class WardAccessibilityService extends AccessibilityService {
     private static final String CHROME = "com.android.chrome";
     private static final long APP_EXIT_CONFIRMATION_MS = 800;
+    private static final long WEBSITE_CONFIRMATION_MS = 600;
     private static WardAccessibilityService activeInstance;
     private final Handler eventHandler = new Handler(Looper.getMainLooper());
     private final TargetVisitGate visitGate = new TargetVisitGate();
     private String activeAppTargetPackage;
     private Runnable pendingAppExit;
+    private Runnable pendingWebsiteConfirmation;
+    private String pendingWebsiteAddress;
     private ProfileRepository profiles;
 
     @Override
@@ -65,14 +68,19 @@ public final class WardAccessibilityService extends AccessibilityService {
         List<TargetProfile> targets = profiles.getTargets();
         TargetProfile target = TargetMatcher.findAppTarget(targets, packageName);
         if (CHROME.equals(packageName)) {
-            String address = readChromeAddress(getRootInActiveWindow());
-            TargetProfile website = TargetMatcher.findWebsiteTarget(targets, address);
-            if (website != null) target = website;
-            else if (target == null) {
-                if (TargetMatcher.hasRecognizableWebsiteHost(address)) {
-                    if (activeAppTargetPackage != null) scheduleAppExitConfirmation();
-                    else visitGate.leaveTarget();
+            ChromeAddress observed = readChromeAddress(getRootInActiveWindow());
+            if (observed.focused) {
+                cancelWebsiteConfirmation();
+                if (target != null) {
+                    // Continue below so an explicitly configured Chrome app target still works.
+                } else {
+                    return;
                 }
+            } else if (target == null) {
+                scheduleWebsiteConfirmation(observed.text, targets);
+                return;
+            } else {
+                scheduleWebsiteConfirmation(observed.text, targets);
                 return;
             }
         }
@@ -146,6 +154,64 @@ public final class WardAccessibilityService extends AccessibilityService {
         pendingAppExit = null;
     }
 
+    private void scheduleWebsiteConfirmation(String address, List<TargetProfile> targets) {
+        if (!TargetMatcher.hasRecognizableWebsiteHost(address)) {
+            cancelWebsiteConfirmation();
+            if (activeAppTargetPackage != null) scheduleAppExitConfirmation();
+            else visitGate.leaveTarget();
+            return;
+        }
+        if (address.equals(pendingWebsiteAddress) && pendingWebsiteConfirmation != null) return;
+        cancelWebsiteConfirmation();
+        pendingWebsiteAddress = address;
+        List<TargetProfile> observedTargets = targets;
+        pendingWebsiteConfirmation = () -> {
+            pendingWebsiteConfirmation = null;
+            ChromeAddress current = readChromeAddress(getRootInActiveWindow());
+            if (current.focused || !address.equals(current.text)) return;
+            TargetProfile website = TargetMatcher.findWebsiteTarget(observedTargets, current.text);
+            if (website != null) {
+                onAccessibilityEventForTarget(website);
+            } else {
+                TargetProfile app = TargetMatcher.findAppTarget(observedTargets, CHROME);
+                if (app != null) onAccessibilityEventForTarget(app);
+                else if (activeAppTargetPackage != null) scheduleAppExitConfirmation();
+                else visitGate.leaveTarget();
+            }
+            pendingWebsiteAddress = null;
+        };
+        eventHandler.postDelayed(pendingWebsiteConfirmation, WEBSITE_CONFIRMATION_MS);
+    }
+
+    private void cancelWebsiteConfirmation() {
+        if (pendingWebsiteConfirmation != null) {
+            eventHandler.removeCallbacks(pendingWebsiteConfirmation);
+            pendingWebsiteConfirmation = null;
+        }
+        pendingWebsiteAddress = null;
+    }
+
+    private void onAccessibilityEventForTarget(TargetProfile target) {
+        cancelPendingAppExit();
+        WardProfile ward = findWard(profiles.getWards(), target.wardId);
+        if (ward == null || !visitGate.shouldShow(target.id)) return;
+        activeAppTargetPackage = target.sourceType == TargetProfile.SourceType.APP
+                ? target.sourceValue : null;
+        Intent intent = new Intent(this, WardActivity.class)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_MULTIPLE_TASK
+                        | Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS | Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                .putExtra(WardActivity.EXTRA_TARGET_ID, target.id)
+                .putExtra(WardActivity.EXTRA_TARGET_NAME, target.sourceType == TargetProfile.SourceType.APP
+                        ? appLabel(target.sourceValue, target.name) : target.name)
+                .putExtra(WardActivity.EXTRA_WARD_NAME, ward.name)
+                .putExtra(WardActivity.EXTRA_MODE, ward.mode.name())
+                .putExtra(WardActivity.EXTRA_WAIT_SECONDS, ward.waitSeconds)
+                .putExtra(WardActivity.EXTRA_PASSPHRASE, ward.passphrase)
+                .putExtra(WardActivity.EXTRA_SHOW_PASSPHRASE, ward.showPassphrase)
+                .putExtra(WardActivity.EXTRA_CASE_SENSITIVE, ward.caseSensitive);
+        startActivity(intent);
+    }
+
     private WardProfile findWard(List<WardProfile> wards, String wardId) {
         for (WardProfile ward : wards) {
             if (ward.id.equals(wardId)) return ward;
@@ -161,19 +227,20 @@ public final class WardAccessibilityService extends AccessibilityService {
         }
     }
 
-    private String readChromeAddress(AccessibilityNodeInfo root) {
-        if (root == null) return null;
-        String[] address = {null};
+    private ChromeAddress readChromeAddress(AccessibilityNodeInfo root) {
+        if (root == null) return new ChromeAddress(null, false);
+        ChromeAddress address = new ChromeAddress(null, false);
         visitNodes(root, address);
-        return address[0];
+        return address;
     }
 
-    private void visitNodes(AccessibilityNodeInfo node, String[] address) {
-        if (node == null || address[0] != null) return;
+    private void visitNodes(AccessibilityNodeInfo node, ChromeAddress address) {
+        if (node == null || address.text != null) return;
         CharSequence id = node.getViewIdResourceName();
         CharSequence text = node.getText();
-        if (id != null && id.toString().contains("url_bar") && text != null) {
-            address[0] = text.toString();
+        if (id != null && id.toString().contains("url_bar")) {
+            if (text != null) address.text = text.toString();
+            address.focused = node.isFocused() || node.isAccessibilityFocused();
             return;
         }
         for (int index = 0; index < node.getChildCount(); index++) {
@@ -181,10 +248,17 @@ public final class WardAccessibilityService extends AccessibilityService {
         }
     }
 
+    private static final class ChromeAddress {
+        String text;
+        boolean focused;
+        ChromeAddress(String text, boolean focused) { this.text = text; this.focused = focused; }
+    }
+
     @Override public void onInterrupt() { }
 
     @Override public void onDestroy() {
         cancelPendingAppExit();
+        cancelWebsiteConfirmation();
         if (activeInstance == this) activeInstance = null;
         super.onDestroy();
     }

@@ -1,4 +1,4 @@
-package dev.areyousureyou.wanttogohere.enforcement;
+package com.auwimo.areyousure.enforcement;
 
 /** Prevents a ward from reopening until monitoring observes that its target was left. */
 public final class TargetVisitGate {

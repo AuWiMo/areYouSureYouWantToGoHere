@@ -1,22 +1,21 @@
-# Wards
+# Are You Sure You Want To Go Here?
 
-Wards is a personal Android app project for adding a deliberate pause before opening selected websites or apps. Its first focus is site-specific wards for Google Chrome on a Samsung Galaxy S21+.
+Are You Sure You Want To Go Here? (AYS) helps you add a deliberate pause before opening selected websites or apps. Create a ward and assign it to one or more targets.
 
-The app has a basic dark interface for creating, editing, and deleting ward and target profiles. When its accessibility service is enabled, it can show the assigned ward when a selected app opens or when a selected website appears in Chrome.
+The app enables creating, editing, and deleting ward and target profiles. When its accessibility service is enabled, it can show the assigned ward when a selected app opens or when a selected website appears in Chrome.
 
-## Planned behavior
+## Wards and targets
 
-- Create named wards that either wait for a chosen time or ask for a passphrase.
+- Create named wards that wait for a chosen time or ask for a passphrase.
 - Choose whether a passphrase is shown and whether it is case-sensitive.
 - Apply a ward to a website or an app.
-- For a blocked website, return to the previous page after closing or completing the ward, rather than repeatedly reopening Chrome.
-- Keep background work and battery use as low as Android allows.
+- Return to the previous page after closing a website ward.
 
-Website detection reads Chrome's visible address bar through Android accessibility events. App targets use their Android package names. Matching a website target includes its subdomains. Android does not expose every browser's current page through a stable public API, so site detection currently supports Chrome only and must be checked on the target phone.
+Website detection reads Chrome's visible address bar through Android accessibility events. App targets use their Android package names. Site detection currently supports Chrome. Other browsers do not expose their current page through a stable Android API.
 
-**Monitoring is off until you enable the service.** Install and open Wards, then open Android Settings → Accessibility → Installed apps (the exact labels vary by device) → Wards target monitoring, and turn it on. Return to Chrome and visit the target site to check it. Android requires the owner to enable accessibility services manually. The service observes foreground window changes and Chrome's visible address bar; it does not poll in the background. Disable the service in the same settings screen to stop monitoring.
+**Monitoring is off until you enable the service.** Install and open AYS, then open Android Settings → Accessibility → Installed apps (the exact labels vary by device) → AYS target monitoring, and turn it on. Android requires you to enable accessibility services manually. The service observes foreground window changes and Chrome's visible address bar; it does not poll in the background. Disable the service in the same settings screen to stop monitoring. This monitoring is completely local and collects no data.
 
-When a match is found, Wards opens a full-screen ward screen above the app or page you were using. A wait ward has one button: it says **CLOSE** during the countdown and changes to **CONTINUE** when the wait ends. Closing abandons the target and goes back in the underlying app (for a website, this returns to the previous page); continuing proceeds to the target. Passphrase wards check the configured phrase using the selected case-sensitivity rule, and can display the phrase if that option is enabled. A ward is shown once per target visit, so closing it does not immediately reopen it while that same app or website remains active.
+When a match is found, AYS opens a full-screen ward screen above the app or page you were using. A wait ward shows **CLOSE** during the countdown and changes to **CONTINUE** when the wait ends. Closing abandons the target and returns to the underlying app or previous website page; continuing proceeds to the target. Passphrase wards check the configured phrase using the selected case-sensitivity rule and can display the phrase if that option is enabled. A ward is shown once per target visit, so closing it does not immediately reopen while that same app or website remains active.
 
 ## Profiles and storage
 
@@ -24,7 +23,7 @@ Ward and target profiles are saved in a JSON file inside the app's private stora
 
 Passphrases are stored in the same private app storage and are not separately encrypted. Android isolates this storage from other apps. Removing the app removes its saved profiles.
 
-The profile editor accepts a website or domain for a website target, and a package name for an app target. App targets can be entered directly; the app does not look up installed apps.
+For an app target, use the app selector to choose an installed app, including a browser. For a website target, enter a website or domain; website monitoring currently reads Chrome's address bar.
 
 ## Open the project
 
@@ -33,8 +32,8 @@ The profile editor accepts a website or domain for a website target, and a packa
 3. Install Android SDK Platform 36 when Android Studio prompts for it.
 4. Use Android Studio's bundled JDK 17 for Gradle. The project uses Android Gradle Plugin 9.4.1, which works with Gradle 9.6 and requires JDK 17.
 
-To use the emulator, create an Android Virtual Device from Android Studio's Device Manager and select Run. To use the Galaxy S21+, enable Developer options and USB debugging, connect the phone, and select it as the run target. Device-specific background and Chrome behavior will need to be checked on the phone itself.
+To use the emulator, create an Android Virtual Device from Android Studio's Device Manager and select Run. To use the Galaxy S21+, enable Developer options and USB debugging, connect the phone, and select it as the run target.
 
-## Project status
+## Device support
 
-This is a personal-use starting point. The configured application ID is a placeholder and should be reviewed before any public release.
+Primary testing is done on a Samsung Galaxy S21+. Other devices are untested, and Android version, manufacturer, and battery-management settings may affect background behavior. Chrome website detection also depends on Chrome's accessibility node structure.

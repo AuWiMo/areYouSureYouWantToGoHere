@@ -1,4 +1,4 @@
-package dev.areyousureyou.wanttogohere;
+package com.auwimo.areyousure;
 
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -25,12 +25,12 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import dev.areyousureyou.wanttogohere.data.JsonProfileRepository;
-import dev.areyousureyou.wanttogohere.data.ProfileRepository;
-import dev.areyousureyou.wanttogohere.data.TargetProfile;
-import dev.areyousureyou.wanttogohere.data.WardProfile;
-import dev.areyousureyou.wanttogohere.ui.theme.AppTheme;
-import dev.areyousureyou.wanttogohere.ui.theme.ThemeManager;
+import com.auwimo.areyousure.data.JsonProfileRepository;
+import com.auwimo.areyousure.data.ProfileRepository;
+import com.auwimo.areyousure.data.TargetProfile;
+import com.auwimo.areyousure.data.WardProfile;
+import com.auwimo.areyousure.ui.theme.AppTheme;
+import com.auwimo.areyousure.ui.theme.ThemeManager;
 
 import java.io.IOException;
 import java.util.List;
@@ -77,7 +77,7 @@ public final class MainActivity extends Activity {
         if (!isWardMonitoringEnabled() && accessibilityPrompt == null) {
             accessibilityPrompt = new AlertDialog.Builder(this)
                     .setTitle("Enable target monitoring")
-                    .setMessage("Wards target monitoring must be enabled under Settings → Accessibility → Installed apps for app and website targets to work.")
+                    .setMessage("AYS target monitoring must be enabled under Settings → Accessibility → Installed apps for app and website targets to work.")
                     .setNegativeButton("Later", (dialog, which) -> accessibilityPrompt = null)
                     .setPositiveButton("Open settings", (dialog, which) -> {
                         accessibilityPrompt = null;
@@ -99,7 +99,7 @@ public final class MainActivity extends Activity {
                 getContentResolver(), Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES);
         if (enabledServices == null) return false;
         String expected = new ComponentName(this,
-                dev.areyousureyou.wanttogohere.enforcement.WardAccessibilityService.class)
+                com.auwimo.areyousure.enforcement.WardAccessibilityService.class)
                 .flattenToString();
         for (String service : enabledServices.split(":")) {
             if (expected.equalsIgnoreCase(service)) return true;

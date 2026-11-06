@@ -1,4 +1,4 @@
-package dev.areyousureyou.wanttogohere.data;
+package com.auwimo.areyousure.data;
 
 import java.util.UUID;
 

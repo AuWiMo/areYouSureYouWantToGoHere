@@ -1,6 +1,6 @@
-package dev.areyousureyou.wanttogohere.enforcement;
+package com.auwimo.areyousure.enforcement;
 
-import dev.areyousureyou.wanttogohere.data.TargetProfile;
+import com.auwimo.areyousure.data.TargetProfile;
 
 import java.net.URI;
 import java.net.URISyntaxException;

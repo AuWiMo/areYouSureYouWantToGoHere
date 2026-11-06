@@ -1,4 +1,4 @@
-package dev.areyousureyou.wanttogohere.ui.theme;
+package com.auwimo.areyousure.ui.theme;
 
 import android.content.Context;
 import android.content.SharedPreferences;

@@ -1,4 +1,4 @@
-package dev.areyousureyou.wanttogohere.enforcement;
+package com.auwimo.areyousure.enforcement;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -9,7 +9,7 @@ import org.junit.Test;
 import java.util.Arrays;
 import java.util.List;
 
-import dev.areyousureyou.wanttogohere.data.TargetProfile;
+import com.auwimo.areyousure.data.TargetProfile;
 
 public class TargetMatcherTest {
     private final TargetProfile site = new TargetProfile("site", "Video", TargetProfile.SourceType.WEBSITE,

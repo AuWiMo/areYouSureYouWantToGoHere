@@ -1,4 +1,4 @@
-package dev.areyousureyou.wanttogohere;
+package com.auwimo.areyousure;
 
 import android.app.Activity;
 import android.graphics.Color;
@@ -15,9 +15,9 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import dev.areyousureyou.wanttogohere.data.WardProfile;
-import dev.areyousureyou.wanttogohere.enforcement.PassphraseMatcher;
-import dev.areyousureyou.wanttogohere.enforcement.WardAccessibilityService;
+import com.auwimo.areyousure.data.WardProfile;
+import com.auwimo.areyousure.enforcement.PassphraseMatcher;
+import com.auwimo.areyousure.enforcement.WardAccessibilityService;
 
 import java.util.Locale;
 
