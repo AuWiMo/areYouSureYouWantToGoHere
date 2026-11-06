@@ -10,7 +10,8 @@
 
     <application
         android:allowBackup="false"
-        android:label="Wards"
+        android:icon="@mipmap/ic_launcher"
+        android:label="Are You Sure?"
         android:theme="@android:style/Theme.Material.NoActionBar">
         <activity
             android:name=".MainActivity"
